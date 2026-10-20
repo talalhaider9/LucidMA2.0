@@ -38,7 +38,7 @@ For a different crime topic or output folder, for example:
 python -m lucid_ma --query "theft from motor vehicle" --limit 50000 --output-dir outputs/theft
 ```
 
-The default workflow does not need Ollama. It maps the configured query to the best crime classification, then uses the weighted NetworkX graph to retrieve the strongest observed links to descriptions, location types, community areas, districts, beats, wards, FBI codes, and coordinate cells. Pandas calculates time series, rates, and map centroids. The program writes an analysis report plus charts under `outputs/`.
+The default workflow does not need Ollama. It maps the query to matching crime classifications, traverses the NetworkX graph from crime type to incident nodes and then to connected attributes, and assembles evidence from those retrieved paths. Each incident node links fields from the same source record, including description, location, community, district, beat, ward, FBI code, hour, weekday, month, year, arrest, domestic status, and coarse coordinate cell. Pandas calculates the hourly summary, outcome percentages, and map centroids. The reports and charts are written under `outputs/`.
 
 ## Data coverage
 
@@ -68,4 +68,4 @@ The key is read from the environment when the map is generated and is not stored
 
 ## Optional agent discussion
 
-Install `pip install -e .[agents]`, start Ollama and pull the configured model, then set `run_agents = True` in `src/lucid_ma/config.py`. The optional workflow performs one Analyst, BriefingWriter, and EvidenceReviewer cycle. It receives the verified summary, including coarse hotspot cells, and the JSON and Markdown reports remain the source of truth.
+Install `pip install -e .[agents]`, start Ollama and pull the configured model, then set `run_agents = True` in `src/lucid_ma/config.py` or pass `--agents`. The Analyst, BriefingWriter, and EvidenceReviewer refine the briefing over multiple epochs. `epoch_limit` in `config.py` caps the process at 10 epochs; it may stop sooner when the reviewer replies `VALID`. Each epoch can use up to three model responses. The JSON and Markdown reports remain the deterministic source of truth.

@@ -1,5 +1,6 @@
 """Semantic crime selection and evidence-based incident profiling."""
 
+from collections import Counter
 from typing import Any
 
 import pandas as pd
@@ -32,28 +33,49 @@ class CrimeRetriever:
         scores = util.pytorch_cos_sim(self.embedder.encode(query, convert_to_tensor=True), self.embeddings)[0]
         return self.catalog_types[torch.argmax(scores).item()]
 
-    def _graph_counts(self, crime_type: str, node_kind: str) -> list[dict[str, Any]]:
-        """Return the strongest graph connections for one crime type and relation."""
+    def _graph_profile(self, crime_type: str) -> dict[str, Counter]:
+        """Traverse crime -> incident -> attribute paths and count retrieved evidence."""
+        profile: dict[str, Counter] = {}
         if self.graph is None:
-            return []
+            return profile
         crime_node = f"crime:{crime_type}"
         if crime_node not in self.graph:
-            return []
-        matches = []
-        for neighbor in self.graph.neighbors(crime_node):
-            attributes = self.graph.nodes[neighbor]
-            if attributes.get("kind") != node_kind:
+            return profile
+        for incident_node in self.graph.neighbors(crime_node):
+            if self.graph.nodes[incident_node].get("kind") != "incident":
                 continue
-            matches.append({
-                "value": attributes["label"],
-                "incidents": int(self.graph[crime_node][neighbor]["weight"]),
-            })
-        return sorted(matches, key=lambda item: (-item["incidents"], item["value"]))[: self.settings.top_results]
+            for attribute_node in self.graph.neighbors(incident_node):
+                attributes = self.graph.nodes[attribute_node]
+                node_kind = attributes.get("kind")
+                if node_kind == "incident":
+                    continue
+                profile.setdefault(node_kind, Counter())[attributes["label"]] += 1
+        return profile
+
+    def _attribute_counts(
+        self,
+        profile: dict[str, Counter],
+        subset: pd.DataFrame,
+        node_kind: str,
+        column: str,
+    ) -> list[dict[str, Any]]:
+        """Format graph path counts, with a table fallback for direct API callers."""
+        counts = profile.get(node_kind)
+        if counts is None and self.graph is None:
+            if column in subset:
+                counts = Counter(subset[column].dropna().astype(str).tolist())
+        if not counts:
+            return []
+        return [
+            {"value": str(value), "incidents": int(count)}
+            for value, count in sorted(counts.items(), key=lambda item: (-item[1], item[0]))[: self.settings.top_results]
+        ]
 
     def retrieve(self, user_query: str) -> dict[str, Any]:
         crime_type = self._select_type(user_query)
         subset = self.frame[self.frame["primary_type"] == crime_type].copy()
-        graph_hotspots = self._graph_counts(crime_type, "hotspot")
+        graph_profile = self._graph_profile(crime_type)
+        graph_hotspots = self._attribute_counts(graph_profile, subset, "hotspot", "spatial_cell")
         centroid_by_cell = subset[subset["has_coordinates"]].groupby("spatial_cell").agg(
             latitude=("latitude", "mean"), longitude=("longitude", "mean")
         )
@@ -74,13 +96,20 @@ class CrimeRetriever:
             "peak_hour": int(hourly.idxmax()), "hourly_counts": [int(hourly.loc[hour]) for hour in range(24)],
             "arrest_rate_percent": round(float(subset["arrest"].mean() * 100), 1), "domestic_rate_percent": round(float(subset["domestic"].mean() * 100), 1),
             "weekend_incidents": int(subset["is_weekend"].sum()), "hotspots": hotspots,
-            "top_descriptions": self._graph_counts(crime_type, "description"),
-            "top_location_types": self._graph_counts(crime_type, "location"),
-            "top_communities": self._graph_counts(crime_type, "community"),
-            "top_districts": self._graph_counts(crime_type, "district"),
-            "top_beats": self._graph_counts(crime_type, "beat"),
-            "top_wards": self._graph_counts(crime_type, "ward"),
-            "top_fbi_codes": self._graph_counts(crime_type, "fbi_code"),
+            "top_descriptions": self._attribute_counts(graph_profile, subset, "description", "description"),
+            "top_location_types": self._attribute_counts(graph_profile, subset, "location", "location_description"),
+            "top_communities": self._attribute_counts(graph_profile, subset, "community", "community_area"),
+            "top_districts": self._attribute_counts(graph_profile, subset, "district", "district"),
+            "top_beats": self._attribute_counts(graph_profile, subset, "beat", "beat"),
+            "top_wards": self._attribute_counts(graph_profile, subset, "ward", "ward"),
+            "top_fbi_codes": self._attribute_counts(graph_profile, subset, "fbi_code", "fbi_code"),
+            "graph_retrieval": {
+                "method": "crime_type -> incident -> attribute",
+                "incident_nodes": int(self.graph.degree[f"crime:{crime_type}"]) if self.graph is not None and f"crime:{crime_type}" in self.graph else int(len(subset)),
+                "attributes_by_relation": {
+                    kind: int(sum(counts.values())) for kind, counts in graph_profile.items()
+                },
+            },
             "weekday_counts": _top_counts(subset, "weekday", 7),
             "monthly_counts": _top_counts(subset, "month_name", 12),
         }
@@ -107,6 +136,7 @@ class CrimeRetriever:
             f"Top community areas by reported count: {entries('top_communities')}",
             f"Top districts by reported count: {entries('top_districts')}",
             f"Top coarse hotspot cells (latitude/longitude grid, not addresses): {hotspots}",
+            f"GraphRAG paths traversed: {result['graph_retrieval']['method']} across {result['graph_retrieval']['incident_nodes']} matching incident nodes.",
         ])
 
 

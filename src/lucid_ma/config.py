@@ -21,7 +21,7 @@ class Settings:
     model_base_url: str = "http://localhost:11434/v1"
     model_api_key: str = "ollama"
     model_temperature: float = 0.3
-    max_rounds: int = 4
+    epoch_limit: int = 10
 
     @property
     def llm_config(self) -> dict:

@@ -21,7 +21,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-agents = ["autogen"]
+agents = ["ag2[openai]"]
 
 [project.scripts]
 lucid-ma = "lucid_ma.main:main"

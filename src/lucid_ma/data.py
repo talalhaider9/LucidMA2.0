@@ -61,9 +61,15 @@ def fetch_crime_data(settings: Settings = SETTINGS) -> pd.DataFrame:
 
 
 def build_crime_graph(frame: pd.DataFrame) -> nx.Graph:
-    """Build a weighted graph of crime types and their observed attributes."""
+    """Build an incident-level graph linking each crime to its observed attributes.
+
+    An incident node connects its crime type to its own place, time, classification,
+    and outcome values. Retrieval can therefore follow multi-hop paths through real
+    incident records instead of joining unrelated category aggregates.
+    """
     graph = nx.Graph()
     dimensions = {
+        "iucr": "iucr",
         "description": "description",
         "location_description": "location",
         "community_area": "community",
@@ -72,24 +78,33 @@ def build_crime_graph(frame: pd.DataFrame) -> nx.Graph:
         "ward": "ward",
         "fbi_code": "fbi_code",
         "spatial_cell": "hotspot",
+        "hour": "hour",
+        "weekday": "weekday",
+        "month_name": "month",
+        "year": "year",
+        "arrest": "arrest",
+        "domestic": "domestic",
     }
-    for column, node_kind in dimensions.items():
-        if column not in frame:
-            continue
-        for (crime, value), count in frame.dropna(subset=[column]).groupby(["primary_type", column]).size().items():
-            crime_node = f"crime:{crime}"
-            attribute_node = f"{node_kind}:{value}"
-            graph.add_node(crime_node, kind="crime_type", label=str(crime))
+    available_dimensions = {column: kind for column, kind in dimensions.items() if column in frame}
+    for row in frame.itertuples(index=False):
+        values = row._asdict()
+        crime = str(values["primary_type"])
+        crime_node = f"crime:{crime}"
+        incident_node = f"incident:{values['id']}"
+        graph.add_node(crime_node, kind="crime_type", label=crime)
+        graph.add_node(incident_node, kind="incident", label=str(values["id"]))
+        graph.add_edge(crime_node, incident_node, relation="has_incident")
+        for column, node_kind in available_dimensions.items():
+            value = values[column]
+            if pd.isna(value) or str(value).strip() == "":
+                continue
+            label = str(value)
+            attribute_node = f"{node_kind}:{label}"
             graph.add_node(
                 attribute_node,
                 kind=node_kind,
-                label=str(value),
+                label=label,
                 source_column=column,
             )
-            graph.add_edge(
-                crime_node,
-                attribute_node,
-                relation=node_kind,
-                weight=int(count),
-            )
+            graph.add_edge(incident_node, attribute_node, relation=node_kind)
     return graph
