@@ -38,7 +38,7 @@ For a different crime topic or output folder, for example:
 python -m lucid_ma --query "theft from motor vehicle" --limit 50000 --output-dir outputs/theft
 ```
 
-The default workflow does not need Ollama. It downloads the configured data, maps the configured query to the best crime classification, and writes an analysis report plus charts under `outputs/`.
+The default workflow does not need Ollama. It maps the configured query to the best crime classification, then uses the weighted NetworkX graph to retrieve the strongest observed links to descriptions, location types, community areas, districts, beats, wards, FBI codes, and coordinate cells. Pandas calculates time series, rates, and map centroids. The program writes an analysis report plus charts under `outputs/`.
 
 ## Data coverage
 

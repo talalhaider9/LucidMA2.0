@@ -61,12 +61,35 @@ def fetch_crime_data(settings: Settings = SETTINGS) -> pd.DataFrame:
 
 
 def build_crime_graph(frame: pd.DataFrame) -> nx.Graph:
-    """Build an explicitly typed graph linking crime type to available dimensions."""
+    """Build a weighted graph of crime types and their observed attributes."""
     graph = nx.Graph()
-    dimensions = {"description": "description", "location_description": "location", "community_area": "community", "district": "district"}
+    dimensions = {
+        "description": "description",
+        "location_description": "location",
+        "community_area": "community",
+        "district": "district",
+        "beat": "beat",
+        "ward": "ward",
+        "fbi_code": "fbi_code",
+        "spatial_cell": "hotspot",
+    }
     for column, node_kind in dimensions.items():
         if column not in frame:
             continue
         for (crime, value), count in frame.dropna(subset=[column]).groupby(["primary_type", column]).size().items():
-            graph.add_edge(f"crime:{crime}", f"{node_kind}:{value}", relation=node_kind, weight=int(count))
+            crime_node = f"crime:{crime}"
+            attribute_node = f"{node_kind}:{value}"
+            graph.add_node(crime_node, kind="crime_type", label=str(crime))
+            graph.add_node(
+                attribute_node,
+                kind=node_kind,
+                label=str(value),
+                source_column=column,
+            )
+            graph.add_edge(
+                crime_node,
+                attribute_node,
+                relation=node_kind,
+                weight=int(count),
+            )
     return graph
