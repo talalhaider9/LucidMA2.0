@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lucid-ma"
+version = "0.1.0"
+description = "Graph-backed Chicago crime analysis with multi-agent reporting"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "networkx",
+    "sentence-transformers",
+    "pandas",
+    "numpy",
+    "sodapy",
+    "torch",
+    "folium",
+    "matplotlib",
+    "seaborn",
+]
+
+[project.optional-dependencies]
+agents = ["autogen"]
+
+[project.scripts]
+lucid-ma = "lucid_ma.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
