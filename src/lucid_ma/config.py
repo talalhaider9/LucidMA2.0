@@ -14,6 +14,8 @@ class Settings:
     hotspot_precision: int = 3
     embedding_model: str = "all-MiniLM-L6-v2"
     output_dir: Path = Path("outputs")
+    # Read at map generation time so notebook secrets added after import are honored.
+    carto_api_key: str | None = None
     run_agents: bool = False
     model_name: str = "deepseek-r1:1.5b"
     model_base_url: str = "http://localhost:11434/v1"

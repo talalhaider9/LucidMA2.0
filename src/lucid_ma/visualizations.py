@@ -1,6 +1,8 @@
 """Create visual outputs from observed crime records, never simulated data."""
 
 from pathlib import Path
+import os
+from urllib.parse import quote
 
 import folium
 from folium.plugins import HeatMap
@@ -31,7 +33,28 @@ def create_visualizations(result: dict, settings: Settings = SETTINGS) -> list[P
     if hotspots:
         map_path = output / "crime_hotspots.html"
         center = [float(np.mean([spot["latitude"] for spot in hotspots])), float(np.mean([spot["longitude"] for spot in hotspots]))]
-        map_view = folium.Map(location=center, zoom_start=11, tiles="OpenStreetMap")
+        map_view = folium.Map(location=center, zoom_start=11, tiles=None)
+        carto_api_key = settings.carto_api_key or os.getenv("CARTO_API_KEY")
+        if carto_api_key:
+            tile_url = (
+                "https://basemaps.cartocdn.com/rastertiles/voyager/"
+                f"{{z}}/{{x}}/{{y}}.png?key={quote(carto_api_key, safe='')}"
+            )
+            folium.TileLayer(
+                tiles=tile_url,
+                attr="© CARTO © OpenStreetMap contributors",
+                name="CARTO Voyager",
+                overlay=False,
+                control=True,
+                max_zoom=20,
+            ).add_to(map_view)
+        else:
+            folium.TileLayer(
+                tiles="OpenStreetMap",
+                name="OpenStreetMap",
+                overlay=False,
+                control=True,
+            ).add_to(map_view)
         HeatMap([[spot["latitude"], spot["longitude"], spot["incidents"]] for spot in hotspots], radius=20).add_to(map_view)
         for spot in hotspots:
             folium.Marker([spot["latitude"], spot["longitude"]], popup=f"{crime_name} grid<br>Incidents: {spot['incidents']}").add_to(map_view)

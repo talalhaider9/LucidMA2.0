@@ -46,6 +46,19 @@ The application uses incident details (ID, case number, date, block, IUCR, prima
 
 Records without latitude or longitude remain in every non-map summary. The map uses only coordinate-bearing incidents.
 
+### CARTO basemap in Colab
+
+The map uses OpenStreetMap by default. To use CARTO Voyager tiles, add a Colab Secret named `CARTO_API_KEY` containing your key, then run this before launching the project:
+
+```python
+from google.colab import userdata
+import os
+
+os.environ["CARTO_API_KEY"] = userdata.get("CARTO_API_KEY")
+```
+
+The key is read from the environment when the map is generated and is not stored in project files. Keep attribution visible on exported maps.
+
 ## Output artifacts
 
 - `analysis.json`: complete structured analysis for another program or notebook.
