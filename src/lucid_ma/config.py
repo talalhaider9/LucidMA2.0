@@ -19,8 +19,7 @@ class Settings:
     model_base_url: str = "http://localhost:11434/v1"
     model_api_key: str = "ollama"
     model_temperature: float = 0.3
-    convergence_threshold: float = 0.95
-    max_rounds: int = 24
+    max_rounds: int = 4
 
     @property
     def llm_config(self) -> dict:

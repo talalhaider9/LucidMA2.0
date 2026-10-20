@@ -41,7 +41,7 @@ def main():
     paths = write_reports(result, settings) + create_visualizations(result, settings)
     if settings.run_agents:
         from .agents import run_agent_analysis
-        run_agent_analysis(context, retriever.embedder, settings)
+        run_agent_analysis(context, settings)
     for path in paths:
         print(f"Generated: {path}")
 

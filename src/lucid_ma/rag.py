@@ -52,9 +52,26 @@ class CrimeRetriever:
     @staticmethod
     def format_context(result: dict[str, Any]) -> str:
         peak = f"{result['peak_hour']:02d}:00"
+
         def entries(name: str) -> str:
             return "; ".join(f"{item['value']} ({item['incidents']})" for item in result[name][:5]) or "No data"
-        return "\n".join(["--- VERIFIED CHICAGO CRIME PROFILE ---", f"Crime type: {result['crime_type']}", f"Records: {result['total_records']} ({result['mapped_records']} mapped)", f"Peak hour: {peak}", f"Arrest rate: {result['arrest_rate_percent']}% | Domestic rate: {result['domestic_rate_percent']}%", f"Top descriptions: {entries('top_descriptions')}", f"Top location types: {entries('top_location_types')}", f"Top community areas: {entries('top_communities')}", f"Top districts: {entries('top_districts')}"])
+        hotspots = "; ".join(
+            f"{spot['spatial_cell']} ({spot['incidents']})"
+            for spot in result["hotspots"][:5]
+        ) or "No coordinate data"
+        return "\n".join([
+            "--- VERIFIED CHICAGO CRIME PROFILE ---",
+            f"Crime type: {result['crime_type']}",
+            f"Records: {result['total_records']} ({result['mapped_records']} have coordinate data)",
+            f"Coverage: {result['date_range']['start']} to {result['date_range']['end']}",
+            f"Peak observed hour: {peak}",
+            f"Arrest rate: {result['arrest_rate_percent']}% | Domestic-related rate: {result['domestic_rate_percent']}%",
+            f"Top descriptions: {entries('top_descriptions')}",
+            f"Top location types: {entries('top_location_types')}",
+            f"Top community areas by reported count: {entries('top_communities')}",
+            f"Top districts by reported count: {entries('top_districts')}",
+            f"Top coarse hotspot cells (latitude/longitude grid, not addresses): {hotspots}",
+        ])
 
 
 GraphCrimeRetriever = CrimeRetriever

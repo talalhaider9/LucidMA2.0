@@ -31,7 +31,7 @@ def create_visualizations(result: dict, settings: Settings = SETTINGS) -> list[P
     if hotspots:
         map_path = output / "crime_hotspots.html"
         center = [float(np.mean([spot["latitude"] for spot in hotspots])), float(np.mean([spot["longitude"] for spot in hotspots]))]
-        map_view = folium.Map(location=center, zoom_start=11, tiles="CartoDB positron")
+        map_view = folium.Map(location=center, zoom_start=11, tiles="OpenStreetMap")
         HeatMap([[spot["latitude"], spot["longitude"], spot["incidents"]] for spot in hotspots], radius=20).add_to(map_view)
         for spot in hotspots:
             folium.Marker([spot["latitude"], spot["longitude"]], popup=f"{crime_name} grid<br>Incidents: {spot['incidents']}").add_to(map_view)

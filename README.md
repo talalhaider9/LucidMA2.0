@@ -55,4 +55,4 @@ Records without latitude or longitude remain in every non-map summary. The map u
 
 ## Optional agent discussion
 
-Install `pip install -e .[agents]`, start Ollama and pull the configured model, then set `run_agents = True` in `src/lucid_ma/config.py`. Deterministic analysis and artifacts are created before the optional discussion runs.
+Install `pip install -e .[agents]`, start Ollama and pull the configured model, then set `run_agents = True` in `src/lucid_ma/config.py`. The optional workflow performs one Analyst, BriefingWriter, and EvidenceReviewer cycle. It receives the verified summary, including coarse hotspot cells, and the JSON and Markdown reports remain the source of truth.
