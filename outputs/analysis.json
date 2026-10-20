@@ -1,0 +1,408 @@
+{
+  "query": "assault",
+  "crime_type": "ASSAULT",
+  "total_records": 2979,
+  "mapped_records": 2972,
+  "date_range": {
+    "start": "2026-08-27T04:06:00+00:00",
+    "end": "2026-10-12T00:00:00+00:00"
+  },
+  "peak_hour": 15,
+  "hourly_counts": [
+    115,
+    71,
+    55,
+    45,
+    35,
+    27,
+    48,
+    76,
+    156,
+    136,
+    162,
+    176,
+    178,
+    151,
+    162,
+    218,
+    178,
+    181,
+    156,
+    154,
+    144,
+    124,
+    115,
+    116
+  ],
+  "arrest_rate_percent": 12.2,
+  "domestic_rate_percent": 26.7,
+  "weekend_incidents": 933,
+  "hotspots": [
+    {
+      "spatial_cell": "Lat:41.776_Lon:-87.616",
+      "incidents": 6,
+      "latitude": 41.7760697705,
+      "longitude": -87.61552046566668
+    },
+    {
+      "spatial_cell": "Lat:41.778_Lon:-87.616",
+      "incidents": 6,
+      "latitude": 41.77770151566667,
+      "longitude": -87.61556276266667
+    },
+    {
+      "spatial_cell": "Lat:41.796_Lon:-87.723",
+      "incidents": 6,
+      "latitude": 41.796367117833334,
+      "longitude": -87.723250345
+    },
+    {
+      "spatial_cell": "Lat:41.722_Lon:-87.624",
+      "incidents": 5,
+      "latitude": 41.721627204,
+      "longitude": -87.624485177
+    },
+    {
+      "spatial_cell": "Lat:41.832_Lon:-87.617",
+      "incidents": 5,
+      "latitude": 41.8320066548,
+      "longitude": -87.617263411
+    },
+    {
+      "spatial_cell": "Lat:41.873_Lon:-87.709",
+      "incidents": 5,
+      "latitude": 41.8727452652,
+      "longitude": -87.7090852648
+    },
+    {
+      "spatial_cell": "Lat:41.693_Lon:-87.624",
+      "incidents": 4,
+      "latitude": 41.69257156175,
+      "longitude": -87.62424499875
+    },
+    {
+      "spatial_cell": "Lat:41.749_Lon:-87.664",
+      "incidents": 4,
+      "latitude": 41.748526903,
+      "longitude": -87.663825429
+    },
+    {
+      "spatial_cell": "Lat:41.750_Lon:-87.599",
+      "incidents": 4,
+      "latitude": 41.750405154,
+      "longitude": -87.59909764425001
+    },
+    {
+      "spatial_cell": "Lat:41.755_Lon:-87.653",
+      "incidents": 4,
+      "latitude": 41.7551127405,
+      "longitude": -87.65264850775
+    }
+  ],
+  "top_descriptions": [
+    {
+      "value": "SIMPLE",
+      "incidents": 1994
+    },
+    {
+      "value": "AGGRAVATED - HANDGUN",
+      "incidents": 495
+    },
+    {
+      "value": "AGGRAVATED - KNIFE / CUTTING INSTRUMENT",
+      "incidents": 232
+    },
+    {
+      "value": "AGGRAVATED - OTHER DANGEROUS WEAPON",
+      "incidents": 138
+    },
+    {
+      "value": "PROTECTED EMPLOYEE - HANDS, FISTS, FEET, NO / MINOR INJURY",
+      "incidents": 49
+    },
+    {
+      "value": "AGGRAVATED POLICE OFFICER - HANDS, FISTS, FEET, NO INJURY",
+      "incidents": 31
+    },
+    {
+      "value": "AGGRAVATED - OTHER FIREARM",
+      "incidents": 13
+    },
+    {
+      "value": "AGGRAVATED PROTECTED EMPLOYEE - OTHER DANGEROUS WEAPON",
+      "incidents": 6
+    },
+    {
+      "value": "AGGRAVATED POLICE OFFICER - HANDGUN",
+      "incidents": 5
+    },
+    {
+      "value": "AGGRAVATED PROTECTED EMPLOYEE - HANDGUN",
+      "incidents": 5
+    }
+  ],
+  "top_location_types": [
+    {
+      "value": "APARTMENT",
+      "incidents": 730
+    },
+    {
+      "value": "STREET",
+      "incidents": 628
+    },
+    {
+      "value": "RESIDENCE",
+      "incidents": 334
+    },
+    {
+      "value": "SIDEWALK",
+      "incidents": 249
+    },
+    {
+      "value": "RESTAURANT",
+      "incidents": 81
+    },
+    {
+      "value": "ALLEY",
+      "incidents": 70
+    },
+    {
+      "value": "SMALL RETAIL STORE",
+      "incidents": 67
+    },
+    {
+      "value": "GAS STATION",
+      "incidents": 65
+    },
+    {
+      "value": "PARKING LOT / GARAGE (NON RESIDENTIAL)",
+      "incidents": 59
+    },
+    {
+      "value": "SCHOOL - PUBLIC GROUNDS",
+      "incidents": 58
+    }
+  ],
+  "top_communities": [
+    {
+      "value": "25",
+      "incidents": 157
+    },
+    {
+      "value": "43",
+      "incidents": 120
+    },
+    {
+      "value": "71",
+      "incidents": 113
+    },
+    {
+      "value": "29",
+      "incidents": 112
+    },
+    {
+      "value": "69",
+      "incidents": 103
+    },
+    {
+      "value": "28",
+      "incidents": 88
+    },
+    {
+      "value": "8",
+      "incidents": 86
+    },
+    {
+      "value": "44",
+      "incidents": 78
+    },
+    {
+      "value": "49",
+      "incidents": 77
+    },
+    {
+      "value": "68",
+      "incidents": 76
+    }
+  ],
+  "top_districts": [
+    {
+      "value": "006",
+      "incidents": 230
+    },
+    {
+      "value": "003",
+      "incidents": 220
+    },
+    {
+      "value": "004",
+      "incidents": 190
+    },
+    {
+      "value": "008",
+      "incidents": 187
+    },
+    {
+      "value": "011",
+      "incidents": 184
+    },
+    {
+      "value": "002",
+      "incidents": 173
+    },
+    {
+      "value": "007",
+      "incidents": 157
+    },
+    {
+      "value": "009",
+      "incidents": 153
+    },
+    {
+      "value": "010",
+      "incidents": 146
+    },
+    {
+      "value": "025",
+      "incidents": 142
+    }
+  ],
+  "top_beats": [
+    {
+      "value": "0612",
+      "incidents": 30
+    },
+    {
+      "value": "0611",
+      "incidents": 27
+    },
+    {
+      "value": "0312",
+      "incidents": 26
+    },
+    {
+      "value": "0321",
+      "incidents": 26
+    },
+    {
+      "value": "0432",
+      "incidents": 25
+    },
+    {
+      "value": "0631",
+      "incidents": 24
+    },
+    {
+      "value": "0632",
+      "incidents": 24
+    },
+    {
+      "value": "1533",
+      "incidents": 24
+    },
+    {
+      "value": "0332",
+      "incidents": 23
+    },
+    {
+      "value": "1014",
+      "incidents": 23
+    }
+  ],
+  "top_wards": [
+    {
+      "value": "28",
+      "incidents": 148
+    },
+    {
+      "value": "24",
+      "incidents": 135
+    },
+    {
+      "value": "17",
+      "incidents": 132
+    },
+    {
+      "value": "20",
+      "incidents": 129
+    },
+    {
+      "value": "6",
+      "incidents": 129
+    },
+    {
+      "value": "16",
+      "incidents": 122
+    },
+    {
+      "value": "8",
+      "incidents": 115
+    },
+    {
+      "value": "21",
+      "incidents": 104
+    },
+    {
+      "value": "9",
+      "incidents": 94
+    },
+    {
+      "value": "4",
+      "incidents": 90
+    }
+  ],
+  "top_fbi_codes": [
+    {
+      "value": "08A",
+      "incidents": 2074
+    },
+    {
+      "value": "04A",
+      "incidents": 905
+    }
+  ],
+  "weekday_counts": [
+    {
+      "value": "Saturday",
+      "incidents": 491
+    },
+    {
+      "value": "Thursday",
+      "incidents": 445
+    },
+    {
+      "value": "Sunday",
+      "incidents": 442
+    },
+    {
+      "value": "Friday",
+      "incidents": 418
+    },
+    {
+      "value": "Wednesday",
+      "incidents": 395
+    },
+    {
+      "value": "Tuesday",
+      "incidents": 395
+    },
+    {
+      "value": "Monday",
+      "incidents": 393
+    }
+  ],
+  "monthly_counts": [
+    {
+      "value": "September",
+      "incidents": 1976
+    },
+    {
+      "value": "October",
+      "incidents": 667
+    },
+    {
+      "value": "August",
+      "incidents": 336
+    }
+  ]
+}
