@@ -361,6 +361,28 @@
       "incidents": 905
     }
   ],
+  "graph_retrieval": {
+    "method": "crime_type -> incident -> attribute",
+    "incident_nodes": 2979,
+    "attributes_by_relation": {
+      "crime_type": 2979,
+      "iucr": 2979,
+      "description": 2979,
+      "location": 2979,
+      "community": 2979,
+      "district": 2979,
+      "beat": 2979,
+      "ward": 2979,
+      "fbi_code": 2979,
+      "hotspot": 2972,
+      "hour": 2979,
+      "weekday": 2979,
+      "month": 2979,
+      "year": 2979,
+      "arrest": 2979,
+      "domestic": 2979
+    }
+  },
   "weekday_counts": [
     {
       "value": "Saturday",
