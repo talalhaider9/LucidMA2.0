@@ -1,0 +1,5 @@
+LUCID-MA 2.0: Autonomous Multi-Agent Crime Analysis
+Architected a high-efficiency upgrade from LUCID-MA (Learning and Understanding Crime
+through Dialogue of Multiple Agents) to a 1.5B-parameter DeepSeek-R1 and multi-hop
+GraphRAG with an early-stopping agent loop (10-epoch cap). Analyzed 2,979 assault records:
+12.2% arrests, 26.7% domestic, peak 15:00; review halted after 2 epochs (VALID).
