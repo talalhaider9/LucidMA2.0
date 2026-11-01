@@ -25,17 +25,24 @@ def run_agent_analysis(context: str, settings: Settings = SETTINGS):
         system_message=(
             "Turn the Analyst's findings into a short neutral briefing. Preserve every "
             "number and category label exactly as supplied. Describe rankings as reported "
-            "counts, not rates or risk. Do not add interpretation or unsupported claims."
+            "counts, not rates or risk. Do not add interpretation or unsupported claims. "
+            "When given NEEDS_REVISION feedback, correct the specific unsupported claims; "
+            "when given QUALITY_SUGGESTIONS, improve clarity, structure, and precision "
+            "without altering the underlying data."
         ),
         llm_config=config,
     )
     reviewer = autogen.AssistantAgent(
         name="EvidenceReviewer",
         system_message=(
-            "Compare the latest briefing with VERIFIED DATA. If every claim and number is "
-            "supported, reply exactly VALID. Otherwise reply NEEDS_REVISION followed only "
-            "by the unsupported claim(s). Reject claims about causes, population, rates, "
-            "unreported crime, trends, or risk when those data are absent."
+            "Evaluate the latest briefing on two grounds. First, check factual support: "
+            "every claim and number must trace to VERIFIED DATA; reject causes, population, "
+            "rates, unreported crime, trends, or risk absent from the data. Second, check "
+            "report quality: it must be accurate, complete, clear, neutral, and precise. "
+            "Reply exactly VALID only if BOTH factual support and report quality are good. "
+            "Otherwise reply NEEDS_REVISION followed by the unsupported claim(s), and add "
+            "QUALITY_SUGGESTIONS followed by specific, actionable changes to the report for "
+            "the BriefingWriter to apply."
         ),
         llm_config=config,
     )
