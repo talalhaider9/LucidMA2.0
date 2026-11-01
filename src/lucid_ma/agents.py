@@ -12,37 +12,45 @@ def run_agent_analysis(context: str, settings: Settings = SETTINGS):
     analyst = autogen.AssistantAgent(
         name="Analyst",
         system_message=(
-            "Write a concise list of factual findings from VERIFIED DATA. Quote supplied "
-            "counts, percentages, dates, categories, and coarse hotspot cells accurately. "
-            "When given NEEDS_REVISION feedback, correct the specific unsupported claims. "
-            "Never infer unreported crime, population, causes, trends, safety risk, or "
-            "district-specific rates absent from the data."
+            "Perform a genuine analysis of VERIFIED DATA, not just a list of findings. "
+            "Quote supplied counts, percentages, dates, categories, and coarse hotspot "
+            "cells accurately. Interpret the data using only arithmetic derivable from it: "
+            "compute each category's share of the total, compare categories, and describe "
+            "distribution shape (e.g., the hourly peak, weekday spread, concentration in "
+            "the top districts). Present 3-5 substantive analytical insights, each backed "
+            "by its supporting figures. When given NEEDS_REVISION feedback, correct the "
+            "specific unsupported claims. Never infer unreported crime, population, "
+            "causes, trends, safety risk, or district-specific rates absent from the data."
         ),
         llm_config=config,
     )
     briefing_writer = autogen.AssistantAgent(
         name="BriefingWriter",
         system_message=(
-            "Turn the Analyst's findings into a short neutral briefing. Preserve every "
-            "number and category label exactly as supplied. Describe rankings as reported "
-            "counts, not rates or risk. Do not add interpretation or unsupported claims. "
-            "When given NEEDS_REVISION feedback, correct the specific unsupported claims; "
-            "when given QUALITY_SUGGESTIONS, improve clarity, structure, and precision "
-            "without altering the underlying data."
+            "Write an actual briefing that synthesizes the Analyst's analysis into a short "
+            "neutral narrative: a headline summary plus clearly labelled sections for "
+            "scope, temporal patterns, geography, and categories. Preserve every number "
+            "and category label exactly as supplied. Describe rankings as reported counts, "
+            "not rates or risk. Do not add interpretation or unsupported claims beyond "
+            "what the Analyst established. When given NEEDS_REVISION feedback, correct the "
+            "specific unsupported claims; when given QUALITY_SUGGESTIONS, improve clarity, "
+            "structure, and precision without altering the underlying data."
         ),
         llm_config=config,
     )
     reviewer = autogen.AssistantAgent(
         name="EvidenceReviewer",
         system_message=(
-            "Evaluate the latest briefing on two grounds. First, check factual support: "
-            "every claim and number must trace to VERIFIED DATA; reject causes, population, "
-            "rates, unreported crime, trends, or risk absent from the data. Second, check "
-            "report quality: it must be accurate, complete, clear, neutral, and precise. "
-            "Reply exactly VALID only if BOTH factual support and report quality are good. "
-            "Otherwise reply NEEDS_REVISION followed by the unsupported claim(s), and add "
-            "QUALITY_SUGGESTIONS followed by specific, actionable changes to the report for "
-            "the BriefingWriter to apply."
+            "Review the latest briefing on two grounds. Ground one, factual support: every "
+            "claim and number must trace to VERIFIED DATA; reject causes, population, "
+            "rates, unreported crime, trends, or risk absent from the data, and reject any "
+            "statistic not derivable from it. Ground two, report quality: the briefing "
+            "must be a substantive, analysis-based narrative - accurate, complete, clear, "
+            "neutral, precise - and not a bare restated list. Begin your reply with the "
+            "verdict on its own line: VALID if and only if BOTH grounds pass; otherwise "
+            "NEEDS_REVISION followed by the unsupported or weak claims, then add "
+            "QUALITY_SUGGESTIONS with specific, actionable changes to the report for the "
+            "BriefingWriter to apply."
         ),
         llm_config=config,
     )
