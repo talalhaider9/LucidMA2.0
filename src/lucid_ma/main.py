@@ -38,7 +38,16 @@ def main():
     context = retriever.format_context(result)
     print(context)
 
-    paths = write_reports(result, settings) + create_visualizations(result, settings)
+    profiles = result.get("results") or [result]
+    paths = []
+    for index, profile in enumerate(profiles):
+        profile_settings = settings
+        if len(profiles) > 1:
+            import re
+            from dataclasses import replace
+            slug = re.sub(r"\W+", "_", profile["crime_type"].lower()).strip("_")
+            profile_settings = replace(settings, output_dir=settings.output_dir / f"{index}_{slug}")
+        paths += write_reports(profile, profile_settings) + create_visualizations(profile, profile_settings)
     if settings.run_agents:
         from .agents import run_agent_analysis
         run_agent_analysis(context, settings)

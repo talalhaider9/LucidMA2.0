@@ -63,6 +63,33 @@ def _unsupported_times(text: str, verified: set[str]) -> set[str]:
     return bad
 
 
+# Reasoning the verified data cannot support. These stems never occur in a verified
+# profile, so a briefing containing any is rejected deterministically regardless of
+# the model: recommendation, causation, speculation, behavioural claims, institutional
+# confabulation, location-of-area nonsense, and the specific hallucinated tokens seen.
+_UNSUPPORTED_PATTERNS = (
+    r"should\b", r"\bmust\b", r"recommend\w*", r"due to\b", r"\bbecause\b",
+    r"\blikely\b", r"suggests?\b", r"indicates?\b", r"implies?\b",
+    r"\bcould\b", r"\bwould\b", r"\bmay\b", r"\bmight\b",
+    r"resident\w*", r"\bprone\b", r"more likely\b", r"engage\w* in violent",
+    r"at risk\b", r"counsel\w*", r"safe space\w*", r"\bstigma\b",
+    r"intervention\w*", r"law enforcement", r"first points of contact",
+    r"located in (?:a )?schools?", r"school setting", r"schools are\b",
+    r"non-?a swing", r"handgunes", r"effective law enforcement",
+    r"positive sign",
+)
+
+
+def _unsupported_claims(text: str) -> set[str]:
+    """Return confabulated reasoning phrases present in a briefing.
+
+    The verified data cannot support causal, behavioural, recommendation, or
+    'located in' claims; these are always rejected regardless of the model.
+    """
+    return {match.group(0) for pattern in _UNSUPPORTED_PATTERNS
+            for match in [re.search(pattern, text, flags=re.IGNORECASE)] if match}
+
+
 def _has_token(text: str, token: str) -> bool:
     return re.search(rf"\b{token}\b", text) is not None
 
@@ -70,7 +97,7 @@ def _has_token(text: str, token: str) -> bool:
 def run_agent_analysis(context: str, settings: Settings = SETTINGS):
     """Iteratively draft and review a briefing, up to the configured epoch limit."""
     config = settings.llm_config
-    state = {"epoch": 0, "briefing_invalid": None, "nudged": False}
+    state = {"epoch": 0, "briefing_errors": None, "briefing_soft": None, "soft_used": False}
     allowed = _verified_counts(context)
     verified_hours = _verified_hours(context)
     analyst = autogen.AssistantAgent(
@@ -136,44 +163,61 @@ def run_agent_analysis(context: str, settings: Settings = SETTINGS):
             return briefing_writer
         if last_speaker is briefing_writer:
             briefing = str(groupchat.messages[-1].get("content") or "")
-            bad = _unsupported_counts(briefing, allowed) | _unsupported_times(briefing, verified_hours)
-            state["briefing_invalid"] = bad or None
-            if bad:
-                print(f"Rejected briefing: unverified value(s) {sorted(bad)}")
+            errors = _unsupported_counts(briefing, allowed) | _unsupported_times(briefing, verified_hours)
+            soft = _unsupported_claims(briefing)
+            state["briefing_errors"] = errors or None
+            state["briefing_soft"] = soft or None
+            if errors:
+                print(f"Rejected briefing: unverified value(s) {sorted(errors)}")
+            if soft:
+                print(f"Flagged confabulated reasoning: {sorted(soft)}")
             return reviewer
         if last_speaker is reviewer:
             review = str(groupchat.messages[-1].get("content") or "").upper()
-            forced = bool(state.get("briefing_invalid"))
-            has_valid = _has_token(review, "VALID")
-            has_needs = _has_token(review, "NEEDS_REVISION")
-            if not forced and has_valid and not has_needs:
-                print(f"Briefing passed evidence review in {state['epoch']} epoch(s).")
+            errors = state.get("briefing_errors")
+            soft = state.get("briefing_soft")
+            model_objected = _has_token(review, "NEEDS_REVISION")
+            can_retry_soft = bool(soft) and not state.get("soft_used")
+            if not errors and not model_objected and not can_retry_soft:
+                if soft:
+                    print(f"Accepted briefing with residual phrasing notes in {state['epoch']} epoch(s).")
+                else:
+                    print(f"Briefing passed evidence review in {state['epoch']} epoch(s).")
                 return None
-            if not has_valid and not has_needs and not state.get("nudged"):
-                state["nudged"] = True
-                print(f"Reminding EvidenceReviewer for a verdict token (epoch {state['epoch']}).")
-                groupchat.messages.append({
-                    "role": "user",
-                    "content": "Your previous reply did not include a verdict token. Reply with "
-                               "VALID on the first line if the briefing is fully supported and "
-                               "well written, otherwise NEEDS_REVISION followed by the issues "
-                               "and QUALITY_SUGGESTIONS with fixes.",
-                })
-                return reviewer
             if state["epoch"] >= settings.epoch_limit:
                 print(f"Reached the {settings.epoch_limit}-epoch limit; keeping deterministic reports authoritative.")
                 return None
             state["epoch"] += 1
-            state["nudged"] = False
             print(f"Agent review epoch {state['epoch']}/{settings.epoch_limit}")
+            if errors:
+                groupchat.messages.append({
+                    "role": "user",
+                    "content": "The verified-data check REJECTED this briefing. These figures do "
+                               "NOT appear in VERIFIED DATA and must be removed: "
+                               f"{sorted(errors)}. Rewrite using only verified figures.",
+                })
+            elif can_retry_soft:
+                state["soft_used"] = True
+                groupchat.messages.append({
+                    "role": "user",
+                    "content": "Remove these unsupported claims; the data cannot support them: "
+                               f"{sorted(soft)}. Rewrite as neutral statements of reported counts "
+                               "only, with no causal, behavioural, or policy claims.",
+                })
+            elif model_objected:
+                groupchat.messages.append({
+                    "role": "user",
+                    "content": "The reviewer found quality issues. Address every NEEDS_REVISION "
+                               "and QUALITY_SUGGESTIONS point, then rewrite the briefing.",
+                })
             return analyst
         return None
 
     groupchat = autogen.GroupChat(
         agents=[proxy, analyst, briefing_writer, reviewer],
         messages=[],
-        # Leave headroom for the opening message, the final reviewer handoff, and one
-        # verdict-token reminder per epoch; the selector enforces the stricter epoch limit.
+        # Leave headroom for the opening message, the final reviewer handoff, and the
+        # code-driven rejection notes; the selector enforces the stricter epoch limit.
         max_round=4 * settings.epoch_limit + 2,
         speaker_selection_method=select_next,
     )

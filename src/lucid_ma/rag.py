@@ -1,5 +1,6 @@
 """Semantic crime selection and evidence-based incident profiling."""
 
+import re
 from collections import Counter
 from typing import Any
 
@@ -71,8 +72,18 @@ class CrimeRetriever:
             for value, count in sorted(counts.items(), key=lambda item: (-item[1], item[0]))[: self.settings.top_results]
         ]
 
-    def retrieve(self, user_query: str) -> dict[str, Any]:
-        crime_type = self._select_type(user_query)
+    @staticmethod
+    def _split_query(query: str) -> list[str]:
+        """Split a query into distinct crime topics.
+
+        Connectors such as 'and', 'also', 'as well as', commas, and semicolons separate
+        distinct topics (e.g. 'child abuse and rape' -> ['child abuse', 'rape']).
+        """
+        parts = re.split(r"\b(?:and|also|as well as|plus)\b|[,;]", query, flags=re.IGNORECASE)
+        topics = [part.strip(" .,;:!?") for part in parts if part.strip()]
+        return topics or [query.strip()]
+
+    def _profile(self, crime_type: str) -> dict[str, Any]:
         subset = self.frame[self.frame["primary_type"] == crime_type].copy()
         graph_profile = self._graph_profile(crime_type)
         graph_hotspots = self._attribute_counts(graph_profile, subset, "hotspot", "spatial_cell")
@@ -91,7 +102,7 @@ class CrimeRetriever:
         ]
         hourly = subset.groupby("hour").size().reindex(range(24), fill_value=0)
         return {
-            "query": user_query, "crime_type": crime_type, "total_records": int(len(subset)), "mapped_records": int(subset["has_coordinates"].sum()),
+            "crime_type": crime_type, "total_records": int(len(subset)), "mapped_records": int(subset["has_coordinates"].sum()),
             "date_range": {"start": subset["date"].min().isoformat(), "end": subset["date"].max().isoformat()},
             "peak_hour": int(hourly.idxmax()), "hourly_counts": [int(hourly.loc[hour]) for hour in range(24)],
             "arrest_rate_percent": round(float(subset["arrest"].mean() * 100), 1), "domestic_rate_percent": round(float(subset["domestic"].mean() * 100), 1),
@@ -114,8 +125,43 @@ class CrimeRetriever:
             "monthly_counts": _top_counts(subset, "month_name", 12),
         }
 
+    def retrieve(self, user_query: str) -> dict[str, Any]:
+        """Profile every distinct crime topic in the query.
+
+        A multi-part query ('child abuse and rape') returns a combined result carrying a
+        list of per-crime-type profiles plus a summary of which types matched.
+        """
+        crime_type = self._select_type(user_query)
+        base = self._profile(crime_type)
+        topics = self._split_query(user_query)
+        profiles: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for topic in topics:
+            topic_type = self._select_type(topic)
+            if topic_type in seen:
+                continue
+            seen.add(topic_type)
+            profile = self._profile(topic_type)
+            profile["query"] = topic
+            profiles.append(profile)
+        if len(profiles) > 1:
+            base = dict(base)
+            base["query"] = user_query
+            base["crime_type"] = " ; ".join(profile["crime_type"] for profile in profiles)
+            base["results"] = profiles
+            base["total_records"] = sum(profile["total_records"] for profile in profiles)
+        else:
+            base["query"] = user_query
+        return base
+
     @staticmethod
     def format_context(result: dict[str, Any]) -> str:
+        profiles = result.get("results")
+        if profiles:
+            return "\n\n".join(
+                CrimeRetriever.format_context(profile) for profile in profiles
+            )
+
         peak = f"{result['peak_hour']:02d}:00"
 
         def entries(name: str) -> str:
