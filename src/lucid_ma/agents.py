@@ -68,9 +68,7 @@ def _unsupported_times(text: str, verified: set[str]) -> set[str]:
 # the model: recommendation, causation, speculation, behavioural claims, institutional
 # confabulation, location-of-area nonsense, and the specific hallucinated tokens seen.
 _UNSUPPORTED_PATTERNS = (
-    r"should\b", r"\bmust\b", r"recommend\w*", r"due to\b", r"\bbecause\b",
-    r"\blikely\b", r"suggests?\b", r"indicates?\b", r"implies?\b",
-    r"\bcould\b", r"\bwould\b", r"\bmay\b", r"\bmight\b",
+    r"should\b", r"\bmust\b", r"recommend\w*",
     r"\bresident[s]?\b", r"\bprone\b", r"more likely\b", r"engage\w* in violent",
     r"at risk\b", r"counsel\w*", r"safe space\w*", r"\bstigma\b",
     r"intervention\w*", r"law enforcement", r"first points of contact",
