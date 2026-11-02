@@ -97,6 +97,31 @@ def _has_token(text: str, token: str) -> bool:
     return re.search(rf"\b{token}\b", text) is not None
 
 
+# The 1.5B model's context window is only ~4096 tokens (Ollama num_ctx default). The
+# group chat otherwise accumulates every turn (the Analyst re-pastes VERIFIED DATA each
+# epoch), which overflows the window around epoch 2. Keep the verified-data anchor plus
+# a recent window that stays inside a conservative character budget (~4 chars/token),
+# leaving room for the system prompt and the model's own reply.
+_CONTEXT_CHAR_BUDGET = 8_000
+
+
+def _trim_history(groupchat) -> None:
+    """Bound the conversation to the anchor message plus a recent character window."""
+    messages = groupchat.messages
+    if len(messages) <= 2:
+        return
+    anchor = messages[0]
+    kept: list[dict] = []
+    used = len(str(anchor.get("content") or ""))
+    for message in reversed(messages[1:]):
+        length = len(str(message.get("content") or ""))
+        if used + length > _CONTEXT_CHAR_BUDGET:
+            break
+        kept.append(message)
+        used += length
+    groupchat.messages[:] = [anchor, *reversed(kept)]
+
+
 def run_agent_analysis(context: str, settings: Settings = SETTINGS):
     """Iteratively draft and review a briefing, up to the configured epoch limit."""
     config = settings.llm_config
@@ -161,6 +186,7 @@ def run_agent_analysis(context: str, settings: Settings = SETTINGS):
     )
 
     def select_next(last_speaker, groupchat):
+        _trim_history(groupchat)
         if last_speaker is proxy:
             state["epoch"] = 1
             print(f"Agent review epoch {state['epoch']}/{settings.epoch_limit}")
