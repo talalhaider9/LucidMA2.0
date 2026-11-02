@@ -71,12 +71,17 @@ _UNSUPPORTED_PATTERNS = (
     r"should\b", r"\bmust\b", r"recommend\w*", r"due to\b", r"\bbecause\b",
     r"\blikely\b", r"suggests?\b", r"indicates?\b", r"implies?\b",
     r"\bcould\b", r"\bwould\b", r"\bmay\b", r"\bmight\b",
-    r"resident\w*", r"\bprone\b", r"more likely\b", r"engage\w* in violent",
+    r"\bresident[s]?\b", r"\bprone\b", r"more likely\b", r"engage\w* in violent",
     r"at risk\b", r"counsel\w*", r"safe space\w*", r"\bstigma\b",
     r"intervention\w*", r"law enforcement", r"first points of contact",
     r"located in (?:a )?schools?", r"school setting", r"schools are\b",
     r"non-?a swing", r"handgunes", r"effective law enforcement",
     r"positive sign",
+    r"community program\w*", r"outreach", r"stakeholder\w*",
+    r"\bprograms\b", r"initiatives?\b", r"expand\w*", r"prevent\w*",
+    r"targeted intervention\w*", r"localized intervention\w*", r"high-risk",
+    r"support services", r"root cause\w*", r"track progress",
+    r"evaluate and adjust", r"prioritiz\w*", r"engagement and support",
 )
 
 
@@ -97,7 +102,7 @@ def _has_token(text: str, token: str) -> bool:
 def run_agent_analysis(context: str, settings: Settings = SETTINGS):
     """Iteratively draft and review a briefing, up to the configured epoch limit."""
     config = settings.llm_config
-    state = {"epoch": 0, "briefing_errors": None, "briefing_soft": None, "soft_used": False}
+    state = {"epoch": 0, "briefing_errors": None, "briefing_soft": None}
     allowed = _verified_counts(context)
     verified_hours = _verified_hours(context)
     analyst = autogen.AssistantAgent(
@@ -137,16 +142,19 @@ def run_agent_analysis(context: str, settings: Settings = SETTINGS):
     reviewer = autogen.AssistantAgent(
         name="EvidenceReviewer",
         system_message=(
-            "Review the latest briefing against VERIFIED DATA on two grounds: (1) factual "
-            "support - every count must appear verbatim in the verified data or be a share "
-            "of verified numbers; the peak hour, dates, and percentages must match the data "
-            "exactly; reject invented counts or times, causes, population, trends, risk, "
-            "behavioural claims about residents or areas, and policy recommendations; "
-            "(2) quality - accurate, complete, clear, neutral, and a substantive analysis "
-            "rather than a restated list. Your first line must be the verdict token by "
-            "itself: VALID only if both grounds pass, otherwise NEEDS_REVISION. Never omit "
-            "the token. After NEEDS_REVISION, list the weak claims and add "
-            "QUALITY_SUGGESTIONS with specific changes for the BriefingWriter to apply."
+            "Review the latest briefing against VERIFIED DATA. Analyze exactly two things: "
+            "1) FACTUAL VALIDITY - every count, time, date, rate, and category must match "
+            "VERIFIED DATA exactly; reject invented figures, causes, trends, population, "
+            "risk, or behavioural claims about residents or areas. "
+            "2) REPORT QUALITY - the briefing must be accurate, complete, clear, neutral, "
+            "well-structured, and a substantive analysis, not a restated list, and it must "
+            "be free of recommendations, advice, or implications. "
+            "Reply with exactly one verdict token as the very first thing: VALID if and only "
+            "if BOTH factual validity and report quality pass; otherwise NEEDS_REVISION "
+            "followed by the specific factual or quality defects and the exact change needed. "
+            "Never propose actions, improvements, programs, or recommendations to law "
+            "enforcement, agencies, communities, or stakeholders, and never speculate. "
+            "Judge only the report."
         ),
         llm_config=config,
     )
@@ -176,13 +184,12 @@ def run_agent_analysis(context: str, settings: Settings = SETTINGS):
             review = str(groupchat.messages[-1].get("content") or "").upper()
             errors = state.get("briefing_errors")
             soft = state.get("briefing_soft")
-            model_objected = _has_token(review, "NEEDS_REVISION")
-            can_retry_soft = bool(soft) and not state.get("soft_used")
-            if not errors and not model_objected and not can_retry_soft:
-                if soft:
-                    print(f"Accepted briefing with residual phrasing notes in {state['epoch']} epoch(s).")
-                else:
-                    print(f"Briefing passed evidence review in {state['epoch']} epoch(s).")
+            has_valid = _has_token(review, "VALID")
+            has_needs = _has_token(review, "NEEDS_REVISION")
+            # Only a clean VALID verdict terminates the loop; anything else keeps it going
+            # so the reviewer must actually approve both facts and report quality.
+            if has_valid and not has_needs and not errors and not soft:
+                print(f"Briefing passed evidence review in {state['epoch']} epoch(s).")
                 return None
             if state["epoch"] >= settings.epoch_limit:
                 print(f"Reached the {settings.epoch_limit}-epoch limit; keeping deterministic reports authoritative.")
@@ -196,19 +203,26 @@ def run_agent_analysis(context: str, settings: Settings = SETTINGS):
                                "NOT appear in VERIFIED DATA and must be removed: "
                                f"{sorted(errors)}. Rewrite using only verified figures.",
                 })
-            elif can_retry_soft:
-                state["soft_used"] = True
+            elif soft:
                 groupchat.messages.append({
                     "role": "user",
                     "content": "Remove these unsupported claims; the data cannot support them: "
                                f"{sorted(soft)}. Rewrite as neutral statements of reported counts "
                                "only, with no causal, behavioural, or policy claims.",
                 })
-            elif model_objected:
+            elif has_needs:
                 groupchat.messages.append({
                     "role": "user",
-                    "content": "The reviewer found quality issues. Address every NEEDS_REVISION "
+                    "content": "The reviewer rejected the briefing. Address every NEEDS_REVISION "
                                "and QUALITY_SUGGESTIONS point, then rewrite the briefing.",
+                })
+            else:
+                groupchat.messages.append({
+                    "role": "user",
+                    "content": "Your reply did not contain a verdict token (VALID or NEEDS_REVISION). "
+                               "Reply VALID only if the briefing is factually valid and of good "
+                               "quality; otherwise reply NEEDS_REVISION with the specific defects. "
+                               "Do not recommend actions to law enforcement or propose policies.",
                 })
             return analyst
         return None
