@@ -97,6 +97,12 @@ def _has_token(text: str, token: str) -> bool:
     return re.search(rf"\b{token}\b", text) is not None
 
 
+def _has_verdict(text: str, verdict: str) -> bool:
+    """Check for an explicit verdict statement like 'VERDICT: VALID' or 'Conclusion: ... Valid'."""
+    pattern = rf"(?:VERDICT\s*:\s*{verdict}\b|\bVERDICT\s+IS\s+{verdict}\b|^\s*{verdict}\b|\bCONCLUSION\s*:\s*(?:THE\s+BRIEFING\s+IS\s+)?{verdict}\b)"
+    return re.search(pattern, text, flags=re.IGNORECASE | re.MULTILINE) is not None
+
+
 def _clean_thought_tags(text: str) -> str:
     """Strip DeepSeek-R1 <think>...</think> reasoning traces to keep turns clean."""
     if not text:
@@ -154,6 +160,8 @@ def run_agent_analysis(context: str, settings: Settings = SETTINGS):
             "neutral briefing containing: Headline Summary, Scope, Temporal Patterns, Geography, and Categories.\n\n"
             "Rules:\n"
             "- Every count, percentage, and peak hour must match VERIFIED DATA verbatim; add no new figures.\n"
+            "- When listing entities (districts, community areas, descriptions), preserve their exact paired counts from VERIFIED DATA.\n"
+            "- Never label counts from a single crime category as 'combined' or 'for both types'. Only use 'combined' if you explicitly sum verified numbers from each category.\n"
             "- Describe rankings strictly as reported counts, not rates or risk.\n"
             "- Give NO recommendations, advice, causal claims, or behavioural claims about residents or areas.\n"
             "- Apply all feedback from the EvidenceReviewer to improve clarity without altering the data.\n"
@@ -166,16 +174,19 @@ def run_agent_analysis(context: str, settings: Settings = SETTINGS):
         system_message=(
             "You are the EvidenceReviewer. Your sole responsibility is to evaluate the "
             "latest briefing produced by BriefingWriter against the VERIFIED DATA provided at the start.\n\n"
-            "Evaluate two criteria:\n"
-            "1. FACTUAL VALIDITY: Check every count, percentage, peak hour, date range, and location. "
-            "Every statistic must match VERIFIED DATA exactly. Reject any invented figures or unverified rates.\n"
-            "2. REPORT QUALITY: Check that the briefing is factual, objective, concise, and structured. "
-            "Reject any causal explanations, resident behavior speculation, demographic claims, or policy recommendations.\n\n"
+            "Audit the briefing rigorously against these criteria:\n"
+            "1. FACTUAL VALIDITY:\n"
+            "   - Cross-check every entity-count pair (e.g. check each District, Community Area, and Description count against VERIFIED DATA). If the writer writes 'District 006: 14' when VERIFIED DATA states '006 (15)', that is a factual discrepancy and MUST be rejected with NEEDS_REVISION.\n"
+            "   - Check that numbers are not falsely claimed as 'combined' or 'for both types' when they only belong to one category.\n"
+            "   - Verify peak hours, date ranges, and percentages match verbatim.\n"
+            "2. REPORT QUALITY:\n"
+            "   - Ensure the briefing is factual, objective, concise, and structured.\n"
+            "   - Reject any causal explanations, resident behavior speculation, demographic stereotyping, or policy recommendations.\n\n"
             "CRITICAL: Do NOT write a new briefing, summary, or report. Judge only the text written by BriefingWriter.\n\n"
-            "Respond using this exact format:\n"
+            "You MUST reply using this exact format:\n"
             "VERDICT: VALID (or NEEDS_REVISION)\n"
-            "FACTUAL VALIDITY: <Evaluation of statistics and numbers against verified data>\n"
-            "REPORT QUALITY: <Evaluation of neutrality, tone, and absence of causal speculation>\n"
+            "FACTUAL VALIDITY: <Line-by-line verification of cited counts and entity pairings against VERIFIED DATA>\n"
+            "REPORT QUALITY: <Evaluation of neutrality, tone, and accuracy of aggregate descriptions>\n"
             "SPECIFIC DEFECTS: <Bulleted list of errors, or 'None'>\n"
             "REQUIRED REVISIONS: <Actionable fixes for BriefingWriter, or 'None'>"
         ),
@@ -220,9 +231,10 @@ def run_agent_analysis(context: str, settings: Settings = SETTINGS):
             groupchat.messages.append({
                 "role": "user",
                 "content": (
-                    f"EvidenceReviewer: Review the latest briefing above against VERIFIED DATA.{hint_str}\n"
+                    f"EvidenceReviewer: Audit the latest briefing above against VERIFIED DATA.{hint_str}\n"
+                    "1. Verify every entity-count pair matches VERIFIED DATA (do not let altered counts pass).\n"
+                    "2. Check that single-category counts are not mislabeled as 'combined'.\n"
                     "Start your reply with 'VERDICT: VALID' or 'VERDICT: NEEDS_REVISION'. "
-                    "Provide your evaluation of FACTUAL VALIDITY, REPORT QUALITY, and SPECIFIC DEFECTS. "
                     "Do NOT write a briefing yourself."
                 ),
             })
@@ -232,8 +244,8 @@ def run_agent_analysis(context: str, settings: Settings = SETTINGS):
             review = review_msg.upper()
             errors = state.get("briefing_errors")
             soft = state.get("briefing_soft")
-            has_valid = _has_token(review, "VALID")
-            has_needs = _has_token(review, "NEEDS_REVISION")
+            has_valid = _has_verdict(review_msg, "VALID") or _has_token(review, "VALID")
+            has_needs = _has_verdict(review_msg, "NEEDS_REVISION") or _has_token(review, "NEEDS_REVISION")
 
             # If reviewer didn't provide a verdict token, retry reviewer directly
             if not has_valid and not has_needs:
