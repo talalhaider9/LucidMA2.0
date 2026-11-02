@@ -17,10 +17,10 @@ class Settings:
     # Read at map generation time so notebook secrets added after import are honored.
     carto_api_key: str | None = None
     run_agents: bool = False
-    model_name: str = "deepseek-r1:1.5b"
+    model_name: str = "deepseek-r1:8b"
     model_base_url: str = "http://localhost:11434/v1"
     model_api_key: str = "ollama"
-    model_temperature: float = 0.3
+    model_temperature: float = 0.6
     epoch_limit: int = 10
 
     @property
